@@ -140,7 +140,7 @@ void Board::set_fen(std::string&& fen) {
 
     // reset moves played
     this->ply_played = 0;
-
+    this->move_list.shrink(0);
 
     // generate zobrist key
     this->generate_key();
@@ -252,6 +252,30 @@ Square Board::get_enpassant_square() const {
 
 Castle Board::get_castling_rights() const {
     return this->castling_rights;
+}
+
+std::size_t Board::get_ply_clock() const {
+    return this->ply_clock;
+}
+
+std::size_t Board::get_ply_played() const {
+    return this->ply_played;
+}
+
+std::size_t Board::get_ply_move_number() const {
+    return this->ply_move_number;
+}
+
+std::size_t Board::get_full_move_number() const {
+    return ply_to_full(this->ply_move_number);
+}
+
+Key Board::get_zobrist_key() const {
+    return this->zobrist_key;
+}
+
+const RegularMoveList& Board::get_move_list() const {
+    return this->move_list;
 }
 
 

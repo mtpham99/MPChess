@@ -262,7 +262,7 @@ constexpr BB_t shift(BB_t bb, shift_t shift) {
     // square input
     if constexpr (std::same_as<Types::Square, BB_t>) {
 
-        const int new_sq_ind = bb + shift;
+        const int new_sq_ind = static_cast<int>(bb) + static_cast<int>(shift);
 
         if (new_sq_ind < 0 || new_sq_ind >= Constants::NUM_SQUARES) {
             return Types::Square::NO_SQUARE;
@@ -579,6 +579,12 @@ template<std::integral T = std::size_t>
 constexpr T full_to_ply(T full, Types::Color side_to_move) {
     return (side_to_move == Types::Color::WHITE) ? 2 * full - 1
                                                  : 2 * full;
+}
+
+template<typename T=std::chrono::milliseconds>
+constexpr std::chrono::time_point<std::chrono::high_resolution_clock, T> current_time() {
+    const auto now = std::chrono::high_resolution_clock::now();
+    return std::chrono::time_point_cast<T>(now);
 }
 
 } // MPChess namespace

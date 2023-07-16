@@ -20,12 +20,15 @@ using Key = uint64_t;
 
 using TimePoint    = std::chrono::time_point<std::chrono::high_resolution_clock, std::chrono::milliseconds>;
 using TimeDuration = std::chrono::milliseconds;
+using Milliseconds = std::chrono::milliseconds;
 
 using MoveFlag  = uint8_t;
 using MoveMask  = uint16_t;
 using MoveData  = uint16_t;
 using MoveScore = uint8_t;
 
+using Eval  = int16_t;
+using Depth = uint16_t;
 
 enum Square : int {
     A1, B1, C1, D1, E1, F1, G1, H1,
@@ -56,11 +59,11 @@ enum Piece : int {
 };
 
 
-enum FlipType : int {
+enum class FlipType : int {
     VERTICAL, HORIZONTAL, DIAG, ANTIDIAG, NO_FLIP
 };
 
-enum RotateType : int {
+enum class RotateType : int {
     CW90, CW180, CCW90, NO_ROTATE
 };
 
@@ -73,10 +76,17 @@ enum StepType : int {
     NO_STEP = 0
 };
 
-enum class MoveGenType {
+enum class MoveGenType : int {
     QUIET,
     CAPTURE,
     PSEUDOLEGAL
+};
+
+enum class NodeType : uint8_t {
+    NULL_NODE,
+    PV_NODE,
+    ALL_NODE,
+    CUT_NODE
 };
 
 struct StateInfo {
@@ -137,6 +147,18 @@ inline constexpr std::size_t RANK_SIZE         =    8;
 inline constexpr std::size_t FILE_SIZE         =    8;
 
 inline constexpr std::size_t MAX_PLY           = 1024;
+
+
+// eval constants
+
+namespace Evals {
+
+inline constexpr Types::Eval INF  = 30000;
+inline constexpr Types::Eval MATE = 20000;
+
+} // Eval namespace
+
+
 
 
 // castle constants

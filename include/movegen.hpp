@@ -194,7 +194,7 @@ std::size_t generate_king_moves(const Board& board, MoveList<move_t>& move_list)
     if constexpr (gen_type != Types::MoveGenType::CAPTURE) {
 
         // check for existing castle rights and check
-        const bool check = board.is_check<color_friend>();
+        const bool check = board.is_check<true>();
         const Types::Castle castle_rights = static_cast<Types::Castle>(board.get_castling_rights() & color_castle_mask);
 
         if (!check && castle_rights) {
@@ -304,8 +304,8 @@ std::size_t generate_piece_moves(const Board& board, MoveList<move_t>& move_list
 
 
 template<Types::MoveGenType gen_type, Types::Color color_friend, Concepts::move_like move_t>
+requires (color_friend != Types::Color::NO_COLOR)
 std::size_t generate_moves(const Board& board, MoveList<move_t>& move_list) {
-    if constexpr (color_friend == Types::Color::NO_COLOR) {return 0;}
 
     std::size_t move_count = 0;
 

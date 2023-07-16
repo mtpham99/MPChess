@@ -20,15 +20,10 @@ unsigned long long perft(unsigned int depth, Board& board, PerftInfo* p_perft_in
     unsigned long long node_count = 0;
     for (const auto& move : move_list) {
 
-        const Color color_friend = board.get_side_to_move();
-        const Color color_enemy  = ~color_friend;
-
         board.make_move(move);
 
         // check if legal move
-        const bool check = (color_friend == Color::WHITE) ? board.is_check<Color::WHITE>()
-                                                          : board.is_check<Color::BLACK>() ;
-        if (!check) {
+        if (!board.is_check<false>()) {
 
             // save perft info if specified
             if (p_perft_info != nullptr) {
@@ -56,9 +51,7 @@ unsigned long long perft(unsigned int depth, Board& board, PerftInfo* p_perft_in
                     }
 
                     // checks
-                    const bool enemy_check = (color_enemy == Color::WHITE) ? board.is_check<Color::WHITE>()
-                                                                           : board.is_check<Color::BLACK>();
-                    if (enemy_check) {
+                    if (board.is_check<true>()) {
                         ++(p_perft_info->checks);
                     }
                 }

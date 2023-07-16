@@ -20,12 +20,14 @@ class Board {
 private:
 
     // board
+
     std::array<Types::Piece, Constants::NUM_SQUARES>     pieces;
     std::array<Types::Bitboard, Constants::NUM_PIECES>   piece_bbs;
     std::array<Types::Bitboard, Constants::NUM_COLORS+1> occupancy_bbs;
 
 
     // game state variables
+
     Types::Color  side_to_move;
     std::size_t   ply_clock;
     std::size_t   ply_played;
@@ -36,36 +38,42 @@ private:
 
 
     // state/move history
+
     std::array<Types::StateInfo, Constants::MAX_PLY> state_history;
-    Types::RegularMoveList                               move_list;
+    RegularMoveList                                  move_list;
 
 
-    // zobrist key methods
+    // generate zobrist key
+
     void generate_key();
-
 
 public:
 
     // constructors
+
     Board();
     Board(std::string&& fen);
 
     
     // no copying
+
     Board(const Board& board)             = delete;
     Board& operator= (const Board& board) = delete;
 
 
     // set/get fen
+
     void set_fen(std::string&& fen);
     std::string get_fen() const;
 
 
     // utils
+
     void print(std::ostream& os = std::cout) const;
 
 
     // board getters
+
     Types::Piece    get_square_piece(Types::Square sq)                const;
     Types::Bitboard get_occupation_bb(Types::Color c)                 const;
     Types::Bitboard get_piece_bb(Types::Piece p)                      const;
@@ -76,6 +84,14 @@ public:
     Types::Square   get_enpassant_square() const;
     Types::Castle   get_castling_rights()  const;
 
+    std::size_t     get_ply_clock()        const;
+    std::size_t     get_ply_played()       const;
+    std::size_t     get_ply_move_number()  const;
+    std::size_t     get_full_move_number() const;
+    Types::Key      get_zobrist_key()      const;
+
+    const RegularMoveList& get_move_list() const;
+
     template<Types::Color side>
     requires (side != Types::Color::NO_COLOR)
     Types::Square get_king_square() const {
@@ -85,6 +101,7 @@ public:
 
 
     // make/unmake move
+
     void make_move(Move move);
     void unmake_move();
 
@@ -101,6 +118,7 @@ public:
 
 
     // validate board
+
     Types::Bitboard is_double_occupied()     const;
     Types::Bitboard is_occupation_mismatch() const;
     void            validate()               const;
@@ -108,6 +126,7 @@ public:
 
 
     // attacks
+
     template<Concepts::bitboard_like BB_t>
     Types::Bitboard attacks_to(BB_t bb) const {
 
@@ -123,17 +142,18 @@ public:
              | (Attacks::attacks<Types::PieceType::ROOK>(bb, occupancy)   & (this->get_piece_type_bb(Types::PieceType::ROOK)   | this->get_piece_type_bb(Types::PieceType::QUEEN)));
     }
 
-    template<Types::Color side>
-    requires (side != Types::Color::NO_COLOR)
+    template<bool side_to_move>
     bool is_check() const {
-
+        
+        const Types::Color    side = (side_to_move) ?  this->side_to_move
+                                                 : ~this->side_to_move;
+        
         const Types::Square   king     = bitboard_to_square(this->get_piece_bb(side, Types::PieceType::KING));
         const Types::Bitboard enemy    = this->get_occupation_bb(~side);
         const Types::Bitboard checkers = this->attacks_to(king) & enemy;
 
         return !is_empty(checkers);
     }
-
 };
 
 // non-member operators

@@ -4,9 +4,6 @@ file(GLOB
      MPChess_SRC
      ${PROJECT_SOURCE_DIR}/src/*.cpp
 )
-# list(REMOVE_ITEM MPChess_SRC ${PROJECT_SOURCE_DIR}/src/main.cpp
-#                              ${PROJECT_SOURCE_DIR}/src/MPChess.cpp
-#                              ${PROJECT_SOURCE_DIR}/src/uci.cpp)
 list(REMOVE_ITEM MPChess_SRC ${PROJECT_SOURCE_DIR}/src/main.cpp)
 
 add_executable(perft_tests perft_tests.cpp ${MPChess_SRC})
@@ -20,3 +17,5 @@ set_target_properties(perft_tests
 include(CTest)
 include(Catch)
 catch_discover_tests(perft_tests)
+
+
