@@ -108,7 +108,7 @@ public:
 }; // Move class
 
 
-class OrderedMove : private Move {
+class OrderedMove : public Move {
 private:
     
     Types::MoveScore score;

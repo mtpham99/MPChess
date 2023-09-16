@@ -559,16 +559,6 @@ constexpr std::pair<Types::Square, Types::Square> castle_king_from_to(Types::Cas
 
 // misc utils
 
-template<std::integral T = int>
-constexpr int char_to_int(char c) {
-    return static_cast<T>(c - '0');
-}
-
-template<std::integral T = int>
-constexpr int int_to_char(T i) {
-    return static_cast<char>('0' + i);
-}
-
 template<std::integral T = std::size_t>
 constexpr T ply_to_full(T ply) {
     return (ply % 2 == 1) ? ply / 2 + 1 // white

@@ -17,5 +17,3 @@ set_target_properties(perft_tests
 include(CTest)
 include(Catch)
 catch_discover_tests(perft_tests)
-
-

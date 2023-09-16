@@ -1,5 +1,9 @@
+// perft_tests.cpp
+
 #define CATCH_CONFIG_MAIN
+
 #include <catch2/catch.hpp>
+
 #include "perft.hpp"
 #include "board.hpp"
 

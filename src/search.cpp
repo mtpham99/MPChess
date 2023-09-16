@@ -10,9 +10,11 @@
 #include "engine.hpp"      // engine variables (tt, searchinfo)
 
 #include "evaluation.hpp"  // evaluate
-#include "movegen.hpp"     // movegen
+#include "movepicker.hpp"  // movepicker
 
 #include "uci.hpp"         // uci
+
+#include <cmath>           // pow
 
 using namespace MPChess::Types;
 using namespace MPChess::Constants;
@@ -32,10 +34,11 @@ Eval quiescence(EngineThread& thread,
     if (stand_pat >= beta)  {return beta;}
     if (stand_pat >  alpha) {alpha = stand_pat;}
 
-    RegularMoveList pseudo_legal_captures;
-    generate_moves<MoveGenType::CAPTURE>(board, pseudo_legal_captures);
-
-    for (const auto& capture : pseudo_legal_captures) {
+    // RegularMoveList pseudo_legal_captures;
+    // generate_moves<MoveGenType::CAPTURE>(board, pseudo_legal_captures);
+    MovePicker<MoveGenType::CAPTURE> move_picker(board);
+    Move capture;
+    while (!(capture = move_picker.next_move()).is_null()) {
 
         // make move
         board.make_move(capture);
@@ -47,11 +50,17 @@ Eval quiescence(EngineThread& thread,
         }
 
         const Eval score = -quiescence(thread, -beta, -alpha);
-        ++(thread.node_counter);
+        ++(Engine::search_info.depth_node_count); // total nodes for current iterative deepening iteration
+        ++(thread.node_counter);                  // total nodes for current search
         board.unmake_move();
 
-        if (score >= beta)  {return beta;}
-        if (score >  alpha) {alpha = score;}
+        if (score >= beta)  {
+            return beta;
+        }
+        
+        else if (score >  alpha) {
+            alpha = score;
+        }
     }
 
     return alpha;
@@ -84,15 +93,14 @@ Eval alpha_beta(EngineThread&    thread,
             || (tt_node_type == NodeType::ALL_NODE && tt_eval <= alpha)
             || (tt_node_type == NodeType::CUT_NODE && tt_eval >= beta))
         {
-            // DEBUG
-            // std::cout << "\nDEBUG TB HIT: TB/ITER DEPTH: " << tt_entry.depth << ", " << depth << "\n";
-
             return tt_eval;
         }
     }
 
     // quiescence
-    if (depth == 0) {return quiescence(thread, alpha, beta);}
+    if (depth == 0) {
+        return quiescence(thread, alpha, beta);
+    }
 
     // alpha-beta
     Move            best_move;
@@ -100,11 +108,21 @@ Eval alpha_beta(EngineThread&    thread,
     NodeType        node_type  =  NodeType::ALL_NODE;
     RegularMoveList pv_child;
 
-    RegularMoveList pseudo_legal_moves;
-    generate_moves<MoveGenType::PSEUDOLEGAL>(board, pseudo_legal_moves);
+    // null-move pruning
+    const std::size_t R = 2; // depth reduction factor 
+    if (depth >= R + 2 && !board.is_check<true>()) {
 
+        board.make_null_move();
+        Eval score = -alpha_beta(thread, depth - 1 - R, -beta, -beta + 1, false, pv_child); // TODO : no need for pv here
+        board.unmake_null_move();
+
+        if (score >= beta) {return beta;}
+    }
+
+    MovePicker<MoveGenType::PSEUDOLEGAL> move_picker(board);
+    Move move;
     std::size_t legal_count = 0;
-    for (const auto& move : pseudo_legal_moves) {
+    while (!(move = move_picker.next_move()).is_null()) {
 
         // root moves
         if (root &&
@@ -114,7 +132,7 @@ Eval alpha_beta(EngineThread&    thread,
         {
             // skip non-root move at root
             continue;
-        }
+        } 
 
         // make move
         board.make_move(move);
@@ -125,22 +143,20 @@ Eval alpha_beta(EngineThread&    thread,
             continue;
         }
         ++legal_count;
+        if (root) {++(Engine::search_info.curr_move_number);}
 
         // uci update
         if (thread.is_main_thread()
+            && depth == 1
             && (current_time() - Engine::prev_uci_update_time) > Engine::uci_update_frequency)
         {
-            Engine::prev_uci_update_time = current_time();
-
+            Engine::prev_uci_update_time        = current_time();
             const RegularMoveList& played_moves = board.get_move_list();
-
-            const auto        p_curr_root_move = std::find(thread.root_moves.begin(), thread.root_moves.end(), played_moves[0]);
-            const std::size_t curr_move_number = std::distance(thread.root_moves.begin(), p_curr_root_move);
 
             UCI::sync_out << "info "
                           << "depth "          << board.get_ply_played()                     << " "
                           << "currmove "       << UCI::move_to_uci_notation(played_moves[0]) << " "
-                          << "currmovenumber " << curr_move_number                           << " "
+                          << "currmovenumber " << Engine::search_info.curr_move_number       << " "
                           << "currline ";
             for (const Move& move : played_moves)
             {
@@ -151,13 +167,26 @@ Eval alpha_beta(EngineThread&    thread,
         }
 
         const Eval score = -alpha_beta(thread, depth - 1, -beta, -alpha, false, pv_child);
-        ++(thread.node_counter);
+        ++(Engine::search_info.depth_node_count); // total nodes for current iterative deepening iteration
+        ++(thread.node_counter);                  // total nodes for current search
         board.unmake_move();
 
         if (score >= beta) {
-            node_type = NodeType::CUT_NODE;
 
+            // store cutoff move in tt
+            node_type = NodeType::CUT_NODE;
             tt.store(board.get_zobrist_key(), move, beta, depth, node_type);
+
+            // killer move
+            if (!move.is_capture()) {
+                const auto p_kmove = std::find(Engine::killer_table[depth].begin(), Engine::killer_table[depth].end(), move);
+                if (p_kmove == Engine::killer_table[depth].end()) {
+                    for (std::size_t k_ind = NUM_KILLER_MOVES-1; k_ind > 0; --k_ind) {
+                        Engine::killer_table[depth][k_ind] = Engine::killer_table[depth][k_ind-1];
+                    }
+                    Engine::killer_table[depth][0] = move;
+                }
+            }
             return beta;
         }
         else if (score > alpha) {
@@ -168,6 +197,11 @@ Eval alpha_beta(EngineThread&    thread,
             pv_parent.shrink(0);
             pv_parent.add_move(move);
             pv_parent.add_moves(pv_child);
+
+            // history move
+            if (!move.is_capture()) {
+                Engine::history_table[board.moved_piece(move)][move.get_to_square()] += (1 << depth);
+            }
         }
 
         if (score > best_score) {
@@ -195,11 +229,16 @@ Eval alpha_beta(EngineThread&    thread,
 
 Eval search(EngineThread& thread) {
 
+
     Board&           root_board = thread.root_board;
     RegularMoveList& root_moves = thread.root_moves;
+    root_board.set_fen(Engine::engine_board.get_fen());
 
     // iterative deepening loop
     Depth depth   = 1;
+    Eval  alpha   = -Evals::INF;
+    Eval  beta    =  Evals::INF;
+    Eval  window  =  Constants::PAWN_SCORE / 2;
     while (Engine::thread_pool.is_running()
            && depth < MAX_PLY)
     {                                              
@@ -215,22 +254,33 @@ Eval search(EngineThread& thread) {
         // multipv loop
         RegularMoveList  temp_pv_line;
         std::size_t      num_pvs = std::min(root_moves.get_size(), Engine::options.num_pvs);
-        for (std::size_t pv_ind  = 0; pv_ind < num_pvs; ++pv_ind) { 
+        for (std::size_t pv_ind  = 0; pv_ind < num_pvs; ++pv_ind) {
 
-            // search
+            // reset pv and search stats
             temp_pv_line.shrink(0);
+            Engine::search_info.curr_move_number      = 0;
+            Engine::search_info.depth_node_count_prev = Engine::search_info.depth_node_count;
+            Engine::search_info.depth_node_count      = 0;
+            
+            Eval score = alpha_beta(thread, depth, alpha, beta, true, temp_pv_line);
 
-            const Eval score = alpha_beta(thread, depth, -Evals::INF, Evals::INF, true, temp_pv_line);
-            
-            // DEBUG
-            // std::cout << "\nDEBUG (FINISH DEPTH): " << depth << " pv size: " << temp_pv_line.get_size() << "\n"; 
-            
-            // Update pv line if we didn't run out of time and we found a new pv_line (did not return from tb hit)
-            // TODO / DEBUG : make sure this check works properly
+            // adjust aspiration window
+            if (score <= alpha || score >= beta) {
+                alpha = -Evals::INF;
+                beta  =  Evals::INF;
+
+                temp_pv_line.shrink(0);
+                score = alpha_beta(thread, depth, alpha, beta, true, temp_pv_line);
+            }
+            else {
+                alpha = score - window;
+                beta  = score + window;
+            }
+
             if (Engine::thread_pool.is_running() && temp_pv_line.get_size() == depth)
             {
                 Engine::pv_lines[pv_ind].set_moves(temp_pv_line);
-                Engine::pv_lines[pv_ind].set_score(score);
+                Engine::pv_lines[pv_ind].set_score(score); 
             }
             // ran out of time
             else {
@@ -266,8 +316,20 @@ Eval search(EngineThread& thread) {
                 for (const Move& pv_move : Engine::pv_lines[pv_ind]) {
                     UCI::sync_out << UCI::move_to_uci_notation(pv_move) << " ";
                 }
+                UCI::sync_out << "\n";
 
-                UCI::sync_out << "\n\n";
+                if (Engine::options.debug) {
+                    UCI::sync_out << "info debug ";
+
+                    if (depth >= 2) {
+                        // mean branching factor
+                        const auto mean_bf_1 = std::pow(Engine::search_info.depth_node_count, 1. / depth);
+                        const auto mean_bf_2 = 1.0 * Engine::search_info.depth_node_count / Engine::search_info.depth_node_count_prev;
+                        UCI::sync_out << "BF: " << mean_bf_1 << " " << mean_bf_2 << "\n";
+                    }
+                }
+
+                UCI::sync_out << "\n";
                 UCI::sync_out.emit();
             }
         }

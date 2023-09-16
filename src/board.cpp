@@ -3,7 +3,7 @@
 #include "board.hpp"
 
 #include "defs.hpp"    // types, constants
-#include "utils.hpp"   // char_to_int, operators, etc.
+#include "utils.hpp"   // operators, etc.
 
 #include "zobrist.hpp" // zobrist hashes
 
@@ -164,7 +164,7 @@ std::string Board::get_fen() const {
 
             // add empty squares to fen before adding piece
             if (empty_count) {
-                fen += int_to_char(empty_count);
+                fen += std::to_string(empty_count);
                 empty_count = 0;
             }
 
@@ -178,7 +178,7 @@ std::string Board::get_fen() const {
             
             // print empty squares
             if (empty_count) {
-                fen += int_to_char(empty_count);
+                fen += std::to_string(empty_count);
                 empty_count = 0;
             }
 
@@ -206,9 +206,9 @@ std::string Board::get_fen() const {
 
 
     // move counters
-    fen += int_to_char(this->ply_clock);
+    fen += std::to_string(this->ply_clock);
     fen += ' ';
-    fen += int_to_char(this->ply_move_number);
+    fen += std::to_string(ply_to_full(this->ply_move_number));
 
     return fen;
 }
@@ -352,7 +352,7 @@ void Board::make_move(Move move) {
         this->ply_clock = 0;
     }
     else {
-    ++(this->ply_clock);
+        ++(this->ply_clock);
     }
 
     ++(this->ply_played);
@@ -367,12 +367,12 @@ void Board::unmake_move() {
 
 #ifndef NDEBUG
     this->validate();
-#endif
+#endif 
 
     // get previous move info
     const Move&      prev_move  = this->move_list[this->ply_played - 1];
-    const StateInfo& prev_state = this->state_history[this->ply_played - 1];
-    
+    const StateInfo& prev_state = this->state_history[this->ply_played - 1];  
+
     const Color& color_moved = ~this->side_to_move;
     const Square from        = prev_move.get_from_square();
     const Square to          = prev_move.get_to_square();
@@ -439,6 +439,50 @@ void Board::unmake_move() {
 #ifndef NDEBUG
     this->validate();
 #endif
+}
+
+void Board::make_null_move() {
+
+    // add state to history
+    this->state_history[this->ply_played] = {
+        .zobrist_key      = this->zobrist_key,
+        .ply_clock        = this->ply_clock,
+        .enpassant_square = this->enpassant_square,
+        .castling_rights  = this->castling_rights,
+        .piece_captured   = Piece::NO_PIECE
+    };
+    this->move_list.add_move(Move{});
+
+    // remove enpassant square
+    if (this->enpassant_square != Square::NO_SQUARE) {
+        this->zobrist_key ^= Zobrist::get_enpassant_key(this->enpassant_square);
+        this->enpassant_square = Square::NO_SQUARE;
+    }
+    // update color
+    this->zobrist_key ^= Zobrist::get_color_key();
+    this->side_to_move = ~(this->side_to_move);
+
+    // update move counters
+    ++(this->ply_clock);
+    ++(this->ply_played);
+}
+
+void Board::unmake_null_move() {
+
+    const StateInfo& prev_state = this->state_history[this->ply_played - 1];  
+
+    // restore irreversible state info
+    this->zobrist_key      = prev_state.zobrist_key;
+    this->enpassant_square = prev_state.enpassant_square;
+    this->castling_rights  = prev_state.castling_rights;
+    this->ply_clock        = prev_state.ply_clock;
+
+    // color to move
+    this->side_to_move = ~(this->side_to_move);
+
+    // movelist update
+    this->move_list.shrink(this->move_list.get_size() - 1);
+    --(this->ply_played);
 }
 
 void Board::update_enpassant_square(Move move) {
@@ -607,6 +651,13 @@ Piece Board::captured_piece(Move move) const {
     return this->pieces[this->captured_square(move)];
 }
 
+Piece Board::moved_piece(Move move) const {
+    if (move.is_promote()) {
+        return color_type_to_piece(this->side_to_move, PieceType::PAWN);
+    }
+    return this->get_square_piece(move.get_from_square());
+}
+
 
 // validate board
 
@@ -751,7 +802,7 @@ void Board::print(std::ostream& os) const {
     // print file labels below board
     os << "  ";
     os << std::string(19, '=') << '\n';
-    os << "   A B C D E F G H\n";
+    os << "    A B C D E F G H\n";
 
 
     // print fen

@@ -36,8 +36,10 @@ struct SearchInfo {
     Types::Milliseconds black_inc{0};
     std::size_t moves_to_go = 0;
 
-    // debug mode
-    bool debug = false;
+    // search stats
+    std::size_t curr_move_number      = 0;
+    std::size_t depth_node_count      = 0;
+    std::size_t depth_node_count_prev = 0;
 };
 
 } // MPChess namespace

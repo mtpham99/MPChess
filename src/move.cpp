@@ -132,6 +132,11 @@ bool operator== (Move m1, Move m2) {
 
 void print_move(Move move, std::ostream& os) {
 
+    if (move.is_null()) {
+        os << "NULL\n";
+        return;
+    }
+
     const Square from = move.get_from_square();
     const Square to   = move.get_to_square();
 

@@ -12,7 +12,6 @@ namespace MPChess {
 // Forward declarations
 class  EngineThread;
 
-
 // EngineThread friend search functions
 
 Types::Eval search(EngineThread& thread);

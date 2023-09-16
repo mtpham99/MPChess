@@ -104,13 +104,15 @@ public:
 
     void make_move(Move move);
     void unmake_move();
+    void make_null_move();
+    void unmake_null_move();
 
     void update_enpassant_square(Move move);
     void update_castling_rights(Move move);
 
-    Types::Piece  moved_piece(Move move)     const;
     Types::Square captured_square(Move move) const;
     Types::Piece  captured_piece(Move move)  const;
+    Types::Piece  moved_piece(Move move)     const;
 
     void remove_piece(Types::Square sq);
     void add_piece(Types::Square sq, Types::Piece p);

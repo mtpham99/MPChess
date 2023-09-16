@@ -91,6 +91,19 @@ void uci_loop() {
             // TODO
         }
 
+        else if (chunk == "debug") {
+            stream >> chunk;
+            if (chunk == "y"   ||
+                chunk == "yes" ||
+                chunk == "on")
+            {
+                Engine::options.debug = true;
+            }
+            else {
+                Engine::options.debug = false;
+            }
+        }
+
         else if (chunk == "position") {
             parse_position(stream);
         }
@@ -121,7 +134,8 @@ void uci_loop() {
         }
 
         else if (chunk == "quit" ||
-                 chunk == "q")
+                 chunk == "q"    ||
+                 chunk == "exit")
         {
             sync_out << "Quitting. Good Bye.\n\n";
             sync_out.emit();
@@ -149,6 +163,7 @@ void parse_position(std::istringstream& stream) {
         while (stream >> chunk && chunk != "moves") {
             fen += chunk + " ";
         }
+        fen.pop_back();
 
         parse_board.set_fen(std::move(fen));
     }
@@ -236,6 +251,7 @@ void parse_go(std::istringstream& stream) {
         }
 
         // search specific number of nodes
+        // DEBUG NOT WORKING
         else if (chunk == "nodes") {
             stream >> chunk;
             parse_search_info.max_nodes = std::stoul(chunk);

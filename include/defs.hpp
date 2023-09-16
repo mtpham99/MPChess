@@ -25,7 +25,7 @@ using Milliseconds = std::chrono::milliseconds;
 using MoveFlag  = uint8_t;
 using MoveMask  = uint16_t;
 using MoveData  = uint16_t;
-using MoveScore = uint8_t;
+using MoveScore = uint32_t;
 
 using Eval  = int16_t;
 using Depth = uint16_t;
@@ -147,6 +147,8 @@ inline constexpr std::size_t RANK_SIZE         =    8;
 inline constexpr std::size_t FILE_SIZE         =    8;
 
 inline constexpr std::size_t MAX_PLY           = 1024;
+
+inline constexpr std::size_t NUM_KILLER_MOVES  =    3;
 
 
 // eval constants
