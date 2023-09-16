@@ -32,6 +32,53 @@ namespace Constants {
         return mmvlva_scores;
     }();
 
+    inline constexpr Types::MoveScore MIN_MVVLVA_SCORE  = []() consteval {
+        Types::MoveScore min_score = std::numeric_limits<Types::MoveScore>::max();
+        for (const auto& row : MVVLVA_SCORES) {
+            for (const auto& score : row) {
+                min_score = std::min(min_score, score);
+            }
+        }
+
+        return min_score;
+    }();
+
+    inline constexpr Types::MoveScore MAX_MVVLVA_SCORE  = []() consteval {
+        Types::MoveScore max_score = std::numeric_limits<Types::MoveScore>::min();
+        for (const auto& row : MVVLVA_SCORES) {
+            for (const auto& score : row) {
+                max_score = std::max(max_score, score);
+            }
+        }
+
+        return max_score;
+    }();
+
+
+    inline constexpr Types::MoveScore TT_MOVE_SCORE        = std::numeric_limits<Types::MoveScore>::max();
+    inline constexpr Types::MoveScore CAPTURE_SCORE_OFFSET = TT_MOVE_SCORE - 1 - MAX_MVVLVA_SCORE;
+    inline constexpr Types::MoveScore KILLER_SCORE_OFFSET  = CAPTURE_SCORE_OFFSET + MIN_MVVLVA_SCORE - 1;
+
+    /*
+    //
+    // #    [movetype]         [movescore]
+    // 1)   tt move         => TT_MOVE_SCORE
+    // 2)   best capture    => TT_MOVE_SCORE - 1 = CAPTURE_SCORE_OFFSET + MAX_MVVLVA_SCORE
+    // 3)   capture
+    // ...
+    // X)   worst capture   => CAPTURE_SCORE_OFFSET + MIN_MVVLVA_SCORE
+    // X+1) 1st killer move => CAPTURE_SCORE_OFFSET + MIN_MVVLVA_SCORE - 1 = KILLER_SCORE_OFFSET
+    // X+2) 2nd killer move => KILLER_SCORE_OFFSET
+    // X+Y) Yth killer move => KILLER_SCORE_OFFSET
+    //
+    // A) hash move(s) is(are) scored as max
+    // B) captures are scored as CAPTURE_SCORE_OFFSET + MVVLVA
+    // C) killers are scored as CAPTURE_SCORE_OFFSET + MIN_MVVLVA - 1 (i.e. scored to be immediately after worst capture)
+    // D) histories are scored as just the history score (starting at 0)
+    // TODO : verify all histories are below killers
+    //
+    */
+
 } // Constants namespace
 
 
@@ -80,9 +127,7 @@ public:
                                                                           piece_type(this->position.captured_piece(move));
 
                 // score captures directly below tt moves
-                const Types::MoveScore score = Constants::MVVLVA_SCORES[attacker][victim]
-                                             + std::numeric_limits<Types::MoveScore>::max() - 1
-                                             - 11; // max mvvlva value
+                const Types::MoveScore score = Constants::CAPTURE_SCORE_OFFSET + Constants::MVVLVA_SCORES[victim][attacker];
                 move.set_score(score);
             }
 
@@ -90,27 +135,25 @@ public:
             // 3. non-capture
             // TODO : setting score here makes child nodes not affect upper depth search order
             else {
-
-                // history move
-                // Note all non-captures (including killer moves) will get history score added
-                const Types::Square to = move.get_to_square();
-                const Types::Piece  p  = this->position.moved_piece(move);
-
-                // TODO : make sure none of these scores are larger than any capture score
-                Types::MoveScore score = Engine::history_table[p][to];
-                
-
                 // killer move
-                // Add max history score to killer moves to prioritize over history moves
+                // placing directory below minimum capture score
                 if (const auto& p_kmove = std::find(Engine::killer_table[this->position.get_ply_played()].begin(), 
                                                     Engine::killer_table[this->position.get_ply_played()].end(),
                                                     move);
                     p_kmove != Engine::killer_table[this->position.get_ply_played()].end())
                 {
-                    const std::size_t k_index = std::distance(Engine::killer_table[this->position.get_ply_played()].begin(), p_kmove);
-                    score += Constants::NUM_KILLER_MOVES - k_index;
+                    const Types::MoveScore score = Constants::KILLER_SCORE_OFFSET;
                     move.set_score(score);
-                } 
+                }
+                // history move
+                else {
+                    const Types::Square to = move.get_to_square();
+                    const Types::Piece  p  = this->position.moved_piece(move);
+
+                    // TODO : make sure none of these scores are larger than any capture score
+                    const Types::MoveScore score = Engine::history_table[p][to];
+                    move.set_score(score);
+                }
             }
         }
 
@@ -118,6 +161,7 @@ public:
         // TODO : should this be select sort on each "next_move" call?
         //      : https://www.chessprogramming.org/Move_Ordering/#Using
         std::sort(this->move_list.begin(), this->move_list.end());
+        std::reverse(this->move_list.begin(), this->move_list.end());
     }
 
 

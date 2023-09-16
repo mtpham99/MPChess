@@ -118,7 +118,11 @@ void uci_loop() {
 
         else if (chunk == "ucinewgame") {
             Engine::thread_pool.stop_search();
+            
+            // clear tt, history heuristic, and killer moves
             Engine::tt.reset();
+            Engine::history_table = {0};
+            Engine::killer_table  = {Move{}};
         }
 
         else if (chunk == "isready") {

@@ -49,9 +49,10 @@ Eval quiescence(EngineThread& thread,
             continue;
         }
 
-        const Eval score = -quiescence(thread, -beta, -alpha);
         ++(Engine::search_info.depth_node_count); // total nodes for current iterative deepening iteration
         ++(thread.node_counter);                  // total nodes for current search
+
+        const Eval score = -quiescence(thread, -beta, -alpha);
         board.unmake_move();
 
         if (score >= beta)  {
@@ -88,7 +89,7 @@ Eval alpha_beta(EngineThread&    thread,
     const TTEntry   tt_entry     = tt.probe(board.get_zobrist_key());
     const Eval&     tt_eval      = tt_entry.eval;
     const NodeType& tt_node_type = tt_entry.node;
-    if (!tt_entry.is_null() && tt_entry.depth > depth) {
+    if (!tt_entry.is_null() && tt_entry.depth >= depth) {
         if (tt_node_type == NodeType::PV_NODE
             || (tt_node_type == NodeType::ALL_NODE && tt_eval <= alpha)
             || (tt_node_type == NodeType::CUT_NODE && tt_eval >= beta))
@@ -145,6 +146,9 @@ Eval alpha_beta(EngineThread&    thread,
         ++legal_count;
         if (root) {++(Engine::search_info.curr_move_number);}
 
+        ++(Engine::search_info.depth_node_count); // total nodes for current iterative deepening iteration
+        ++(thread.node_counter);                  // total nodes for current search
+
         // uci update
         if (thread.is_main_thread()
             && depth == 1
@@ -153,22 +157,25 @@ Eval alpha_beta(EngineThread&    thread,
             Engine::prev_uci_update_time        = current_time();
             const RegularMoveList& played_moves = board.get_move_list();
 
-            UCI::sync_out << "info "
-                          << "depth "          << board.get_ply_played()                     << " "
-                          << "currmove "       << UCI::move_to_uci_notation(played_moves[0]) << " "
-                          << "currmovenumber " << Engine::search_info.curr_move_number       << " "
-                          << "currline ";
-            for (const Move& move : played_moves)
-            {
-                UCI::sync_out << UCI::move_to_uci_notation(move) << " ";
+            // Only print update if not in null pruning variation
+            // TODO : is this null prune variation check slow?
+            const auto p_nmove = std::find(played_moves.begin(), played_moves.end(), Move{});
+            if (p_nmove == played_moves.end()) {
+                UCI::sync_out << "info "
+                              << "depth "          << board.get_ply_played()                     << " "
+                              << "currmove "       << UCI::move_to_uci_notation(played_moves[0]) << " "
+                              << "currmovenumber " << Engine::search_info.curr_move_number       << " "
+                              << "currline ";
+                for (const Move& move : played_moves)
+                {
+                    UCI::sync_out << UCI::move_to_uci_notation(move) << " ";
+                }
+                UCI::sync_out << "\n\n";
+                UCI::sync_out.emit();
             }
-            UCI::sync_out << "\n\n";
-            UCI::sync_out.emit();
         }
 
         const Eval score = -alpha_beta(thread, depth - 1, -beta, -alpha, false, pv_child);
-        ++(Engine::search_info.depth_node_count); // total nodes for current iterative deepening iteration
-        ++(thread.node_counter);                  // total nodes for current search
         board.unmake_move();
 
         if (score >= beta) {
@@ -200,7 +207,7 @@ Eval alpha_beta(EngineThread&    thread,
 
             // history move
             if (!move.is_capture()) {
-                Engine::history_table[board.moved_piece(move)][move.get_to_square()] += (1 << depth);
+                Engine::history_table[board.moved_piece(move)][move.get_to_square()] += (depth * depth);
             }
         }
 
@@ -292,7 +299,7 @@ Eval search(EngineThread& thread) {
         } // pv loop
 
         // sort pvlines
-        std::sort(Engine::pv_lines.begin(), Engine::pv_lines.end());
+        std::sort(Engine::pv_lines.rbegin(), Engine::pv_lines.rend());
 
         // uci update
         if (thread.is_main_thread()) {
@@ -323,9 +330,9 @@ Eval search(EngineThread& thread) {
 
                     if (depth >= 2) {
                         // mean branching factor
-                        const auto mean_bf_1 = std::pow(Engine::search_info.depth_node_count, 1. / depth);
-                        const auto mean_bf_2 = 1.0 * Engine::search_info.depth_node_count / Engine::search_info.depth_node_count_prev;
-                        UCI::sync_out << "BF: " << mean_bf_1 << " " << mean_bf_2 << "\n";
+                        const auto eff_bf = 1.0 * Engine::search_info.depth_node_count / Engine::search_info.depth_node_count_prev;
+                        const auto mean_bf  = std::pow(Engine::search_info.depth_node_count, 1. / depth);
+                        UCI::sync_out << "EBF: " << eff_bf << " MBF: " << mean_bf << "\n";
                     }
                 }
 

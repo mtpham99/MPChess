@@ -51,7 +51,7 @@ inline EngineThreadPool    thread_pool(options.num_threads);
 inline Board engine_board;
 inline std::vector<PVLine> pv_lines(options.num_pvs);
 
-inline Types::Milliseconds uci_update_frequency{1000};
+inline Types::Milliseconds uci_update_frequency{2000};
 inline Types::TimePoint    prev_uci_update_time;
 
 } // Engine namespace
