@@ -15,6 +15,7 @@
 #include "uci.hpp"         // uci
 
 #include <cmath>           // pow
+#include <algorithm>       // find, sort
 
 using namespace MPChess::Types;
 using namespace MPChess::Constants;
@@ -49,8 +50,7 @@ Eval quiescence(EngineThread& thread,
             continue;
         }
 
-        ++(Engine::search_info.depth_node_count); // total nodes for current iterative deepening iteration
-        ++(thread.node_counter);                  // total nodes for current search
+        ++(thread.node_counter);
 
         const Eval score = -quiescence(thread, -beta, -alpha);
         board.unmake_move();
@@ -109,7 +109,7 @@ Eval alpha_beta(EngineThread&    thread,
     NodeType        node_type  =  NodeType::ALL_NODE;
     RegularMoveList pv_child;
 
-    // null-move pruning
+    // null move pruning
     const std::size_t R = 2; // depth reduction factor 
     if (depth >= R + 2 && !board.is_check<true>()) {
 
@@ -144,10 +144,8 @@ Eval alpha_beta(EngineThread&    thread,
             continue;
         }
         ++legal_count;
-        if (root) {++(Engine::search_info.curr_move_number);}
-
-        ++(Engine::search_info.depth_node_count); // total nodes for current iterative deepening iteration
-        ++(thread.node_counter);                  // total nodes for current search
+        ++(thread.node_counter);
+        if (root && thread.is_main_thread()) {++(Engine::search_info.curr_move_number);}
 
         // uci update
         if (thread.is_main_thread()
@@ -161,17 +159,17 @@ Eval alpha_beta(EngineThread&    thread,
             // TODO : is this null prune variation check slow?
             const auto p_nmove = std::find(played_moves.begin(), played_moves.end(), Move{});
             if (p_nmove == played_moves.end()) {
-                UCI::sync_out << "info "
-                              << "depth "          << board.get_ply_played()                     << " "
-                              << "currmove "       << UCI::move_to_uci_notation(played_moves[0]) << " "
-                              << "currmovenumber " << Engine::search_info.curr_move_number       << " "
-                              << "currline ";
+                std::cout << "info "
+                          << "depth "          << board.get_ply_played()                     << " "
+                          << "currmove "       << UCI::move_to_uci_notation(played_moves[0]) << " "
+                          << "currmovenumber " << Engine::search_info.curr_move_number       << " "
+                          << "currline ";
                 for (const Move& move : played_moves)
                 {
-                    UCI::sync_out << UCI::move_to_uci_notation(move) << " ";
+                    std::cout << UCI::move_to_uci_notation(move) << " ";
                 }
-                UCI::sync_out << "\n\n";
-                UCI::sync_out.emit();
+                std::cout << "\n\n";
+                
             }
         }
 
@@ -302,42 +300,39 @@ Eval search(EngineThread& thread) {
         std::sort(Engine::pv_lines.rbegin(), Engine::pv_lines.rend());
 
         // uci update
-        if (thread.is_main_thread()) {
+        if (thread.is_main_thread() && temp_pv_line.get_size() == depth) {
             const auto total_nodes      = Engine::thread_pool.sum_threads(&EngineThread::node_counter);
             const auto time_spent       = (current_time() - Engine::search_info.start_time).count();
             const auto nodes_per_second = 1000.0 * total_nodes / time_spent;
 
             for (std::size_t pv_ind=0; pv_ind<num_pvs; ++pv_ind) {
-                UCI::sync_out << "info "
-                              << "depth " << depth << " ";
+                std::cout << "info "
+                          << "depth " << depth << " ";
 
                 if (num_pvs > 1) {
-                    UCI::sync_out << "multipv " << pv_ind << " ";
+                    std::cout << "multipv " << pv_ind << " ";
                 }
 
-                UCI::sync_out << "score cp " << Engine::pv_lines[pv_ind].get_score() << " "
-                              << "nodes "    << total_nodes                          << " "
-                              << "nps "      << nodes_per_second                     << " "
-                              << "pv ";
+                std::cout << "score cp " << Engine::pv_lines[pv_ind].get_score() << " "
+                          << "nodes "    << total_nodes                          << " "
+                          << "nps "      << nodes_per_second                     << " "
+                          << "pv ";
 
                 for (const Move& pv_move : Engine::pv_lines[pv_ind]) {
-                    UCI::sync_out << UCI::move_to_uci_notation(pv_move) << " ";
+                    std::cout << UCI::move_to_uci_notation(pv_move) << " ";
                 }
-                UCI::sync_out << "\n";
+                std::cout << "\n";
 
                 if (Engine::options.debug) {
-                    UCI::sync_out << "info debug ";
+                    std::cout << "info debug ";
 
                     if (depth >= 2) {
                         // mean branching factor
-                        const auto eff_bf = 1.0 * Engine::search_info.depth_node_count / Engine::search_info.depth_node_count_prev;
+                        const auto eff_bf   = 1.0 * Engine::search_info.depth_node_count / Engine::search_info.depth_node_count_prev;
                         const auto mean_bf  = std::pow(Engine::search_info.depth_node_count, 1. / depth);
-                        UCI::sync_out << "EBF: " << eff_bf << " MBF: " << mean_bf << "\n";
+                        std::cout << "EBF: " << eff_bf << " MBF: " << mean_bf << "\n\n";
                     }
                 }
-
-                UCI::sync_out << "\n";
-                UCI::sync_out.emit();
             }
         }
 
@@ -346,8 +341,7 @@ Eval search(EngineThread& thread) {
     } // iterative deepening loop
 
     if (thread.is_main_thread()) {
-        UCI::sync_out << "bestmove " << UCI::move_to_uci_notation(Engine::pv_lines[0][0]) << "\n";
-        UCI::sync_out.emit();
+        std::cout << "bestmove " << UCI::move_to_uci_notation(Engine::pv_lines[0][0]) << "\n";
     }
     return Engine::pv_lines[0].get_score();
 }

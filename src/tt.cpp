@@ -2,6 +2,7 @@
 
 #include "tt.hpp"
 
+
 using namespace MPChess::Types;
 using namespace MPChess::Constants;
 

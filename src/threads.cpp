@@ -8,7 +8,7 @@
 #include "search.hpp"     // search
 
 #include "engine.hpp"     // engine globals
-#include "uci.hpp"        // uci (sync_out debug)
+#include "uci.hpp"        // uci (std::cout debug)
 
 using namespace MPChess::Types;
 using namespace MPChess::Constants;
@@ -88,7 +88,8 @@ void EngineThread::wait_until_stopped() {
 
 bool EngineThread::check_stop() const {
 
-    std::size_t total_node_counter = Engine::thread_pool.sum_threads(&EngineThread::node_counter);
+    std::size_t total_node_counter       = Engine::thread_pool.sum_threads(&EngineThread::node_counter); // this is total since engine started current search
+    Engine::search_info.depth_node_count = total_node_counter;                                           // this gets reset to 0 at the start of each iterative deepening iteration
 
     if (!Engine::search_info.infinite) {
         

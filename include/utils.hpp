@@ -65,7 +65,7 @@ constexpr Types::Bitboard file_bitboard(Types::Square sq) {
     return Constants::FILE_A << file_index(sq);
 }
 
-constexpr void print_bitboard(Types::Bitboard bb, std::ostream& os=std::cout) {
+inline void print_bitboard(Types::Bitboard bb, std::ostream& os=std::cout) {
     for (const Types::Square& sq : Constants::ALL_SQUARES_PRINT_ORDER) {
         if (is_empty(bb & square_to_bitboard(sq))) {os << '0';}
         else                                       {os << '1';}
@@ -75,7 +75,7 @@ constexpr void print_bitboard(Types::Bitboard bb, std::ostream& os=std::cout) {
     }
 }
 
-constexpr void print_square(Types::Square sq, std::ostream& os=std::cout) {
+inline void print_square(Types::Square sq, std::ostream& os=std::cout) {
     os << Constants::FILE_LABELS[file_index(sq)]
        << Constants::RANK_LABELS[rank_index(sq)]
        << '\n';
@@ -104,7 +104,7 @@ constexpr Types::Square lsb(Types::Bitboard bb) {
 
 constexpr Types::Square msb(Types::Bitboard bb) {
     if (is_empty(bb)) {return Types::Square::NO_SQUARE;}
-    return static_cast<Types::Square>((UINT64_WIDTH - 1) - clz(bb));
+    return static_cast<Types::Square>((64 - 1) - clz(bb));
 }
 
 constexpr Types::Square pop_lsb(Types::Bitboard& bb) {

@@ -169,7 +169,7 @@ MagicEntry find_magic(Types::Square sq,
     // get relevant blocker squares and shift used for hashing
     const Types::Bitboard relevant_blockers = relevant_blocker_mask<slider>(sq);
     const std::size_t     bit_count         = pop_count(relevant_blockers);
-    std::size_t           key_shift         = UINT64_WIDTH - bit_count;
+    std::size_t           key_shift         = 64 - bit_count;
 
     // find magics using brute force
     //
@@ -341,7 +341,7 @@ MagicTable generate_magics() {
         MagicEntry magic_entry = Magics::find_magic<slider>(sq);
         magic_entry.table_offset = offset;
 
-        const std::size_t key_size  = UINT64_WIDTH - magic_entry.key_shift;
+        const std::size_t key_size  = 64 - magic_entry.key_shift;
         const std::size_t hash_size = (1 << key_size);
         offset += hash_size;
 
@@ -368,7 +368,7 @@ std::vector<Types::Bitboard> generate_sliding_attack_table(const Magics::MagicTa
     std::size_t table_size = 0;
     for (const Magics::MagicEntry& magic_entry : magic_table) {
         
-        const std::size_t key_size  = (UINT64_WIDTH - magic_entry.key_shift);
+        const std::size_t key_size  = (64 - magic_entry.key_shift);
         const std::size_t hash_size = (1 << key_size);
         table_size += hash_size;
     }

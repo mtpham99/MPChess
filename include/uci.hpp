@@ -5,7 +5,6 @@
 #include <string>
 
 #include <iostream>   // cout
-#include <syncstream> // osyncstream
 #include <sstream>    // stringstream
 
 
@@ -18,7 +17,6 @@ class Board;
 
 namespace UCI {
 
-inline std::osyncstream sync_out{std::cout};
 
 // utils
 

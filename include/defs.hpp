@@ -8,9 +8,13 @@
 #include <chrono>      // time
 
 
+using uint = unsigned int;
+
+
 namespace MPChess {
 
 namespace Types {
+
 
 using Bitboard = uint64_t;
 
@@ -27,7 +31,7 @@ using MoveMask  = uint16_t;
 using MoveData  = uint16_t;
 using MoveScore = uint32_t;
 
-using Eval  = int16_t;
+using Eval = int16_t;
 using Depth = uint16_t;
 
 enum Square : int {

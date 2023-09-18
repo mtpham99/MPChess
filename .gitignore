@@ -2,5 +2,5 @@
 .vs/
 out/
 bin
-build
+*build
 lib

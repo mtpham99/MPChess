@@ -2,12 +2,13 @@
 
 #pragma once
 
-#include "defs.hpp" // types, constants
-#include "move.hpp" // move
+#include "defs.hpp"  // types, constants
+#include "move.hpp"  // move
 
-#include <array>    // array
+#include <array>     // array
 
-#include <cassert>  // assert
+#include <cassert>   // assert
+#include <algorithm> // find
 
 
 namespace MPChess {

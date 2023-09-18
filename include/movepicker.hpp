@@ -109,14 +109,14 @@ public:
 
         // Get tt move for current position
         const Types::TTEntry tt_entry = Engine::tt.probe(this->position.get_zobrist_key());
-        const Move           pv_move  = tt_entry.move;
+        const Move           tt_move  = tt_entry.move;
 
         for (OrderedMove& move : this->move_list) {
 
             // 1. hash/tt move
             // TODO : multi pv?
-            if (move == pv_move) {
-                move.set_score(std::numeric_limits<Types::MoveScore>::max());
+            if (move == tt_move) {
+                move.set_score(Constants::TT_MOVE_SCORE);
             }
 
             // 2. capture

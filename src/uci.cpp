@@ -62,8 +62,7 @@ Move uci_notation_to_move(std::string_view notation, const Board& board) {
 // uci specification
 
 void print_welcome() {
-    sync_out << "Welcome to MPChess!\n\n";
-    sync_out.emit();
+    std::cout << "Welcome to MPChess!\n\n";
 }
 
 void uci_loop() {
@@ -76,15 +75,13 @@ void uci_loop() {
         stream >> chunk;
 
         if (chunk == "uci") {
-            sync_out << "id name MPChess\n"
+            std::cout << "id name MPChess\n"
                      << "id author Matthew Pham\n"
                      << "uciok\n\n";
-            sync_out.emit();
         }
 
         else if (chunk == "isready") {
-            sync_out << "readyok\n\n";
-            sync_out.emit();
+            std::cout << "readyok\n\n";
         }
 
         else if (chunk == "setoption") {
@@ -126,23 +123,20 @@ void uci_loop() {
         }
 
         else if (chunk == "isready") {
-            sync_out << "readyok\n";
-            sync_out.emit();
+            std::cout << "readyok\n";
+            
         }
 
         else if (chunk == "print" ||
                  chunk == "d")
         {
-            sync_out << Engine::engine_board << "\n\n";
-            sync_out.emit();
+            std::cout << Engine::engine_board << "\n\n";
         }
 
         else if (chunk == "quit" ||
-                 chunk == "q"    ||
                  chunk == "exit")
         {
-            sync_out << "Quitting. Good Bye.\n\n";
-            sync_out.emit();
+            std::cout << "Quitting. Good Bye.\n\n";
 
             Engine::thread_pool.stop_search();
 

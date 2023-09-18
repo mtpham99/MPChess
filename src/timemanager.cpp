@@ -18,7 +18,7 @@ Milliseconds calculate_search_time(const Board& board,
                                    Milliseconds black_inc,
                                    std::size_t  moves_to_go)
 {
-    const uint remaining_moves_estimate = std::min(20ul, moves_to_go);
+    const uint remaining_moves_estimate = std::min(static_cast<std::size_t>(20), moves_to_go);
     const Milliseconds remaining_time = (board.get_side_to_move() == Color::WHITE) ? white_time + white_inc
                                                                                    : black_time + black_inc;
 
