@@ -2,13 +2,13 @@
 
 #include "threads.hpp"
 
-#include "defs.hpp"       // types, constants
-#include "utils.hpp"      // current_time
+#include "defs.hpp"        // types, constants
+#include "utils.hpp"       // current_time
 
-#include "search.hpp"     // search
+#include "search.hpp"      // search
 
-#include "engine.hpp"     // engine globals
-#include "uci.hpp"        // uci (std::cout debug)
+#include "engine.hpp"      // engine globals
+
 
 using namespace MPChess::Types;
 using namespace MPChess::Constants;
@@ -128,7 +128,7 @@ EngineThreadPool::EngineThreadPool(std::size_t num_threads) :
 }
 
 
-// statu
+// status
 
 bool EngineThreadPool::is_running() const {
     return this->status == EnginePoolStatus::RUNNING;

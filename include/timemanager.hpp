@@ -6,14 +6,8 @@
 namespace MPChess {
 
 // forward declarations
-class Board;
-namespace Types {
-
+class  Board;
 struct SearchInfo;
-
-} // Types namespace
-
-
 
 Types::Milliseconds calculate_search_time(const Board& board,
                                           Types::Milliseconds white_time,
@@ -22,6 +16,6 @@ Types::Milliseconds calculate_search_time(const Board& board,
                                           Types::Milliseconds black_inc,
                                           std::size_t moves_to_go);
 
-Types::Milliseconds calculate_search_time(const Board& board, const Types::SearchInfo& search_info);
+Types::Milliseconds calculate_search_time(const Board& board, const SearchInfo& search_info);
 
 } // MPChess namespace

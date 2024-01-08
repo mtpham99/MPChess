@@ -27,14 +27,14 @@ struct SearchInfo {
     std::size_t max_nodes = std::numeric_limits<std::size_t>::max();
     std::size_t max_depth = Constants::MAX_PLY;
     std::size_t mate_in_n = 0;
-    Types::TimeDuration max_time = Types::Milliseconds::max();
+    Types::Milliseconds max_time = Types::Milliseconds::max();
 
     // time/clock info
-    Types::Milliseconds white_time{0};
-    Types::Milliseconds black_time{0};
-    Types::Milliseconds white_inc{0};
-    Types::Milliseconds black_inc{0};
-    std::size_t moves_to_go = 0;
+    Types::Milliseconds white_time = Types::Milliseconds::max();
+    Types::Milliseconds black_time = Types::Milliseconds::max();
+    Types::Milliseconds white_inc  = Types::Milliseconds::max();
+    Types::Milliseconds black_inc  = Types::Milliseconds::max();
+    std::size_t moves_to_go = std::numeric_limits<std::size_t>::max();
 
     // search stats
     std::size_t curr_move_number      = 0;

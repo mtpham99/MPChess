@@ -2,18 +2,19 @@
 
 #include "uci.hpp"
 
-#include "defs.hpp"     // types, constants
-#include "utils.hpp"    // square_to_notation, current_time
+#include "defs.hpp"        // types, constants
+#include "utils.hpp"       // square_to_notation, current_time
 
-#include "board.hpp"    // board
-#include "move.hpp"     // move
-#include "movelist.hpp" // movelist
+#include "board.hpp"       // board
+#include "move.hpp"        // move
+#include "movelist.hpp"    // movelist
 
-#include "movegen.hpp"  // movegen
-#include "engine.hpp"   // engine globals (searchinfo)
+#include "movegen.hpp"     // movegen
+#include "engine.hpp"      // engine globals (searchinfo)
+#include "timemanager.hpp" // timemanager
 
-#include <string>       // string
-#include <sstream>      // stringstream
+#include <string>          // string
+#include <sstream>         // stringstream
 
 using namespace MPChess::Types;
 using namespace MPChess::Constants;
@@ -268,6 +269,10 @@ void parse_go(std::istringstream& stream) {
             parse_search_info.max_time = Milliseconds{std::stoull(chunk)};
         }
     }
+
+    // set search time
+    const Milliseconds search_time = calculate_search_time(Engine::engine_board, parse_search_info);
+    parse_search_info.max_time = std::min(parse_search_info.max_time, search_time);
 
     Engine::thread_pool.start_search(std::move(parse_search_info));
 }

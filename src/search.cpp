@@ -109,9 +109,11 @@ Eval alpha_beta(EngineThread&    thread,
     NodeType        node_type  =  NodeType::ALL_NODE;
     RegularMoveList pv_child;
 
+    const bool in_check = board.is_check<true>();
+
     // null move pruning
     const std::size_t R = 2; // depth reduction factor 
-    if (depth >= R + 2 && !board.is_check<true>()) {
+    if (depth >= R + 2 && !in_check) {
 
         board.make_null_move();
         Eval score = -alpha_beta(thread, depth - 1 - R, -beta, -beta + 1, false, pv_child); // TODO : no need for pv here
@@ -147,6 +149,10 @@ Eval alpha_beta(EngineThread&    thread,
         ++(thread.node_counter);
         if (root && thread.is_main_thread()) {++(Engine::search_info.curr_move_number);}
 
+        // check if move is a killer move
+        const auto p_kmove = std::find(Engine::killer_table[depth].begin(), Engine::killer_table[depth].end(), move);
+        const bool is_killer_move = (p_kmove != Engine::killer_table[depth].end());
+
         // uci update
         if (thread.is_main_thread()
             && depth == 1
@@ -168,12 +174,30 @@ Eval alpha_beta(EngineThread&    thread,
                 {
                     std::cout << UCI::move_to_uci_notation(move) << " ";
                 }
-                std::cout << "\n\n";
-                
+                std::cout << std::endl;
             }
         }
 
-        const Eval score = -alpha_beta(thread, depth - 1, -beta, -alpha, false, pv_child);
+        // late move reductions
+        Eval score;
+        const std::size_t R = depth / 3; // reduction size
+        if (legal_count > 4         &&   // search at least 4 moves first
+            !move.is_capture()      &&   // do not reduce captures
+            !board.is_check<true>() &&   // do not reduce moves that give check
+            !in_check               &&   // do not reduce moves while in check
+            !is_killer_move)             // do not reduce killer moves   
+        {
+            score = -alpha_beta(thread, depth - R - 1, -beta, -alpha, false, pv_child);
+        }
+        else {
+
+            std::size_t E = 0; // extension size
+            if (board.is_check<true>()) {E += 1;} // check extension
+            
+            score = -alpha_beta(thread, depth - 1 + E, -beta, -alpha, false, pv_child);
+        }
+
+
         board.unmake_move();
 
         if (score >= beta) {
@@ -184,8 +208,7 @@ Eval alpha_beta(EngineThread&    thread,
 
             // killer move
             if (!move.is_capture()) {
-                const auto p_kmove = std::find(Engine::killer_table[depth].begin(), Engine::killer_table[depth].end(), move);
-                if (p_kmove == Engine::killer_table[depth].end()) {
+                if (!is_killer_move) {
                     for (std::size_t k_ind = NUM_KILLER_MOVES-1; k_ind > 0; --k_ind) {
                         Engine::killer_table[depth][k_ind] = Engine::killer_table[depth][k_ind-1];
                     }
@@ -234,7 +257,7 @@ Eval alpha_beta(EngineThread&    thread,
 
 Eval search(EngineThread& thread) {
 
-
+    // copy engine position to each thread
     Board&           root_board = thread.root_board;
     RegularMoveList& root_moves = thread.root_moves;
     root_board.set_fen(Engine::engine_board.get_fen());
@@ -282,7 +305,7 @@ Eval search(EngineThread& thread) {
                 beta  = score + window;
             }
 
-            if (Engine::thread_pool.is_running() && temp_pv_line.get_size() == depth)
+            if (Engine::thread_pool.is_running() && temp_pv_line.get_size() != 0)
             {
                 Engine::pv_lines[pv_ind].set_moves(temp_pv_line);
                 Engine::pv_lines[pv_ind].set_score(score); 
@@ -300,10 +323,10 @@ Eval search(EngineThread& thread) {
         std::sort(Engine::pv_lines.rbegin(), Engine::pv_lines.rend());
 
         // uci update
-        if (thread.is_main_thread() && temp_pv_line.get_size() == depth) {
+        if (thread.is_main_thread() && temp_pv_line.get_size() != 0) {
             const auto total_nodes      = Engine::thread_pool.sum_threads(&EngineThread::node_counter);
             const auto time_spent       = (current_time() - Engine::search_info.start_time).count();
-            const auto nodes_per_second = 1000.0 * total_nodes / time_spent;
+            const auto nodes_per_second = static_cast<unsigned long long>(1000. * total_nodes / time_spent);
 
             for (std::size_t pv_ind=0; pv_ind<num_pvs; ++pv_ind) {
                 std::cout << "info "
@@ -330,9 +353,10 @@ Eval search(EngineThread& thread) {
                         // mean branching factor
                         const auto eff_bf   = 1.0 * Engine::search_info.depth_node_count / Engine::search_info.depth_node_count_prev;
                         const auto mean_bf  = std::pow(Engine::search_info.depth_node_count, 1. / depth);
-                        std::cout << "EBF: " << eff_bf << " MBF: " << mean_bf << "\n\n";
+                        std::cout << "EBF: " << eff_bf << " MBF: " << mean_bf << "\n";
                     }
                 }
+                std::cout << std::endl;
             }
         }
 
@@ -341,7 +365,7 @@ Eval search(EngineThread& thread) {
     } // iterative deepening loop
 
     if (thread.is_main_thread()) {
-        std::cout << "bestmove " << UCI::move_to_uci_notation(Engine::pv_lines[0][0]) << "\n";
+        std::cout << "bestmove " << UCI::move_to_uci_notation(Engine::pv_lines[0][0]) << "\n" << std::flush;
     }
     return Engine::pv_lines[0].get_score();
 }
