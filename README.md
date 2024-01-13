@@ -1,24 +1,52 @@
 # MPChess
-My first chess engine written in C++, as I read through [The Chess Programming Wiki](https://www.chessprogramming.org/Main_Page)
+Making my first UCI (universal chess interface) chess engine written in C++, as I read through [The Chess Programming Wiki](https://www.chessprogramming.org/Main_Page)
+
+# Build Dependencies
+- (Optional/Testing) Catch2 v2.x
+
+# Build
+Build from source using cmake:
+```
+mkdir build && cd build
+cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=yes ..
+make -j$(nproc)
+```
+Built binaries will be in the "bin" directory.
+
+# Run Perft Tests
+Perft tests are designed around the 6 positions from [The Chess Programming Wiki: Perft results](https://www.chessprogramming.org/Perft_Results).
+
+Tests were made using [Catch2 (v2.x)](https://github.com/catchorg/Catch2/tree/v2.x) and integrated using cmake.
+
+To run the tests, make sure MPChess was built with the "BUILD_TESTING" set. The run the following:
+```
+cd build
+ctest -j6 # Run all 6 tests in parallel
+```
+
+# How to Use
+Below is a link to the UCI (Universal Chess Interface):
+
+[UCI Specification](https://www.wbec-ridderkerk.nl/html/UCIProtocol.html)
 
 ## Features
-- Bitboards
-- Magic Bitboards
-- Simple Late Move Reductions
-- Simple Move Extensions
+- [Bitboards](https://www.chessprogramming.org/Bitboards)
+- [Magic Bitboards](https://www.chessprogramming.org/Magic_Bitboards)
+- [Quiescence Search](https://www.chessprogramming.org/Quiescence_Search)
+- [Transposition Table](https://www.chessprogramming.org/Transposition_Table)
+- [Killer Heuristic](https://www.chessprogramming.org/Killer_Heuristic)
+- [History Heuristic](https://www.chessprogramming.org/History_Heuristic)
+- [Null Move Pruning](https://www.chessprogramming.org/Null_Move_Pruning)
+- [Aspiration Windows](https://www.chessprogramming.org/Aspiration_Windows)
+- [Simple Late Move Reductions](https://www.chessprogramming.org/Late_Move_Reductions)
+- [Simple Move Extensions](https://www.chessprogramming.org/Extensions)
     - Checks
-- Null Move Pruning
-- Killer & History Heuristic
-- Transposition Table
-- Aspiration Windows
-- Quiescence Search
 
 ## TODO List
 - Move Time
-- Multi-Threaded Search & Transposition Table
+- Multi-Threaded Search/Multi PV
 - Opening Book
 - Tablebases
-- Multi PV
 - Mate Search
 - [Lichess Bot Client](https://github.com/lichess-bot-devs/lichess-bot)
 
